@@ -79,10 +79,11 @@ def upsert_video(conn: sqlite3.Connection, video: dict) -> None:
         {**video, "processed_at": _now()},
     )
     conn.execute("DELETE FROM videos_fts WHERE video_id = ?", (video["video_id"],))
-    conn.execute(
-        "INSERT INTO videos_fts (video_id, title, transcript_full, summary) VALUES (?, ?, ?, ?)",
-        (video["video_id"], video["title"], video.get("transcript_full") or "", video.get("summary") or ""),
-    )
+    if video.get("summary"):
+        conn.execute(
+            "INSERT INTO videos_fts (video_id, title, transcript_full, summary) VALUES (?, ?, ?, ?)",
+            (video["video_id"], video["title"], video.get("transcript_full") or "", video.get("summary") or ""),
+        )
     conn.commit()
 
 
