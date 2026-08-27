@@ -6,6 +6,7 @@ from youtube_insight.transcript import fetch_transcript
 from youtube_insight.summarizer import summarize
 from youtube_insight.notify import send_notification
 from youtube_insight.feed import fetch_feed_entries, find_new_entries
+from youtube_insight.notion_sync import sync_video_to_notion
 
 
 def cmd_channels_add(conn: sqlite3.Connection, channel_id: str, channel_name: str) -> None:
@@ -45,6 +46,16 @@ def cmd_process(conn: sqlite3.Connection, video_id: str, channel_id: str, title:
         "status": "success",
     }
     db.upsert_video(conn, video)
+    if video["status"] == "success":
+        channel_row = conn.execute(
+            "SELECT channel_name FROM channels WHERE channel_id = ?", (channel_id,)
+        ).fetchone()
+        channel_name = channel_row[0] if channel_row else channel_id
+        sync_video_to_notion(
+            {**video, "channel_name": channel_name},
+            token=config.notion_token(),
+            database_id=config.notion_database_id(),
+        )
     return video
 
 
