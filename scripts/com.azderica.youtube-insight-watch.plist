@@ -1,0 +1,50 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!--
+  유튜브 인사이트 파이프라인 — 매일 09:00
+
+  등록된 채널의 신규 영상을 감지해 자막 추출·요약하고 Discord 채널로 알린다.
+
+  설치:
+    cp scripts/com.azderica.youtube-insight-watch.plist ~/Library/LaunchAgents/
+    launchctl load ~/Library/LaunchAgents/com.azderica.youtube-insight-watch.plist
+
+  먼저 확인:
+    ./scripts/watch.sh
+-->
+<!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
+<plist version="1.0">
+<dict>
+    <key>Label</key>
+    <string>com.azderica.youtube-insight-watch</string>
+
+    <key>ProgramArguments</key>
+    <array>
+        <string>/bin/bash</string>
+        <string>/Users/mh97888/business/projects/project-youtube-insight/scripts/watch.sh</string>
+    </array>
+
+    <key>EnvironmentVariables</key>
+    <dict>
+        <key>HOME</key>
+        <string>/Users/mh97888</string>
+        <key>PATH</key>
+        <string>/Users/mh97888/.local/bin:/opt/homebrew/bin:/usr/local/bin:/usr/bin:/bin</string>
+    </dict>
+
+    <key>StartCalendarInterval</key>
+    <dict>
+        <key>Hour</key>
+        <integer>9</integer>
+        <key>Minute</key>
+        <integer>0</integer>
+    </dict>
+
+    <key>StandardOutPath</key>
+    <string>/Users/mh97888/business/logs/youtube-insight-watch.log</string>
+    <key>StandardErrorPath</key>
+    <string>/Users/mh97888/business/logs/youtube-insight-watch.err.log</string>
+
+    <key>ProcessType</key>
+    <string>Background</string>
+</dict>
+</plist>
