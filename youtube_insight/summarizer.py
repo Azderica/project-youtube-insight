@@ -32,13 +32,16 @@ def summarize(title: str, transcript_text: str) -> dict | None:
     # transcript_text는 신뢰할 수 없는 외부(유튜브 자막) 데이터이므로 --tools ""로
     # 모든 툴을 아예 비활성화한다. --permission-mode bypassPermissions는 툴 실행을
     # 오히려 무제한 허용하므로 이 요약(순수 텍스트 변환) 작업에는 절대 쓰지 않는다.
-    result = subprocess.run(
-        ["claude", "--print", "--tools", ""],
-        input=prompt,
-        capture_output=True,
-        text=True,
-        timeout=180,
-    )
+    try:
+        result = subprocess.run(
+            ["claude", "--print", "--tools", ""],
+            input=prompt,
+            capture_output=True,
+            text=True,
+            timeout=180,
+        )
+    except Exception:
+        return None
     if result.returncode != 0:
         return None
     return parse_summary_output(result.stdout)

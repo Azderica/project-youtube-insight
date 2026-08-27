@@ -1,3 +1,4 @@
+import subprocess
 from unittest.mock import patch, MagicMock
 from youtube_insight import summarizer
 
@@ -29,3 +30,12 @@ def test_summarize_claude_실패하면_None_반환():
 
 def test_parse_summary_output_형식_어긋나면_None():
     assert summarizer.parse_summary_output("형식이 안 맞는 응답") is None
+
+
+def test_summarize_subprocess_예외_발생하면_None_반환():
+    with patch(
+        "youtube_insight.summarizer.subprocess.run",
+        side_effect=subprocess.TimeoutExpired(cmd="claude", timeout=180),
+    ):
+        result = summarizer.summarize("영상 제목", "자막 전문 텍스트")
+    assert result is None
