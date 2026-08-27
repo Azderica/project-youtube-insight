@@ -53,19 +53,22 @@ def cmd_watch(conn: sqlite3.Connection, notify_url: str, notify_token: str) -> l
     for channel in db.list_channels(conn):
         try:
             entries = fetch_feed_entries(channel["channel_id"])
+            known_ids = {row["video_id"] for row in conn.execute("SELECT video_id FROM videos").fetchall()}
         except Exception:
             continue
-        known_ids = {row["video_id"] for row in conn.execute("SELECT video_id FROM videos").fetchall()}
         new_entries = find_new_entries(entries, known_ids)
         for entry in new_entries:
-            result = cmd_process(
-                conn, entry["video_id"], entry["channel_id"], entry["title"],
-                entry["url"], entry["published_at"],
-            )
-            processed.append(result)
-            if result["status"] == "success":
-                msg = f"🎬 새 영상: {result['title']}\n{result['insight']}\n{result['url']}"
-                send_notification(msg, url=notify_url, token=notify_token)
+            try:
+                result = cmd_process(
+                    conn, entry["video_id"], entry["channel_id"], entry["title"],
+                    entry["url"], entry["published_at"],
+                )
+                processed.append(result)
+                if result["status"] == "success":
+                    msg = f"🎬 새 영상: {result['title']}\n{result['insight']}\n{result['url']}"
+                    send_notification(msg, url=notify_url, token=notify_token)
+            except Exception:
+                continue
     return processed
 
 

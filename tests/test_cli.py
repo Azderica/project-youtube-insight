@@ -86,3 +86,30 @@ def test_cmd_watch_이미_처리된_영상은_건너뜀():
         processed = cli.cmd_watch(conn, notify_url="http://x", notify_token="tok")
     assert processed == []
     mock_notify.assert_not_called()
+
+
+def test_cmd_watch_한_영상_처리중_예외나도_나머지_영상은_처리됨():
+    conn = make_conn()
+    db.add_channel(conn, "UC123", "테스트채널", source="manual")
+    fake_entries = [
+        {
+            "video_id": "vid1", "channel_id": "UC123", "title": "실패할 영상",
+            "url": "https://youtu.be/vid1", "published_at": "2026-08-01T00:00:00+00:00",
+        },
+        {
+            "video_id": "vid2", "channel_id": "UC123", "title": "성공할 영상",
+            "url": "https://youtu.be/vid2", "published_at": "2026-08-02T00:00:00+00:00",
+        },
+    ]
+    with patch("youtube_insight.cli.fetch_feed_entries", return_value=fake_entries), \
+         patch("youtube_insight.cli.cmd_process", side_effect=[
+             sqlite3.OperationalError("database is locked"),
+             {"video_id": "vid2", "status": "success", "title": "성공할 영상",
+              "insight": "인사이트", "url": "https://youtu.be/vid2"},
+         ]) as mock_process, \
+         patch("youtube_insight.cli.send_notification", return_value=True) as mock_notify:
+        processed = cli.cmd_watch(conn, notify_url="http://x", notify_token="tok")
+    assert mock_process.call_count == 2
+    assert len(processed) == 1
+    assert processed[0]["video_id"] == "vid2"
+    mock_notify.assert_called_once()
