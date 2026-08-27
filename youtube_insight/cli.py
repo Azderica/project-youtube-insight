@@ -7,6 +7,7 @@ from youtube_insight.summarizer import summarize
 from youtube_insight.notify import send_notification
 from youtube_insight.feed import fetch_feed_entries, find_new_entries
 from youtube_insight.notion_sync import sync_video_to_notion
+from youtube_insight.publish import render_index
 
 
 def cmd_channels_add(conn: sqlite3.Connection, channel_id: str, channel_name: str) -> None:
@@ -83,6 +84,22 @@ def cmd_watch(conn: sqlite3.Connection, notify_url: str, notify_token: str) -> l
     return processed
 
 
+def cmd_publish(conn: sqlite3.Connection, site_dir) -> None:
+    conn.row_factory = sqlite3.Row
+    rows = conn.execute(
+        """
+        SELECT v.title, v.url, v.published_at, v.summary, v.insight, c.channel_name
+        FROM videos v JOIN channels c ON v.channel_id = c.channel_id
+        WHERE v.status = 'success'
+        ORDER BY v.published_at DESC
+        """
+    ).fetchall()
+    videos = [dict(row) for row in rows]
+    html = render_index(videos)
+    site_dir.mkdir(parents=True, exist_ok=True)
+    (site_dir / "index.html").write_text(html, encoding="utf-8")
+
+
 def _get_connection() -> sqlite3.Connection:
     path = config.db_path()
     path.parent.mkdir(parents=True, exist_ok=True)
@@ -113,6 +130,8 @@ def build_parser() -> argparse.ArgumentParser:
 
     sub.add_parser("watch")
 
+    sub.add_parser("publish")
+
     return parser
 
 
@@ -136,6 +155,9 @@ def main() -> None:
     elif args.command == "watch":
         processed = cmd_watch(conn, config.notify_url(), config.internal_api_token())
         print(f"처리된 신규 영상: {len(processed)}건")
+    elif args.command == "publish":
+        cmd_publish(conn, config.PROJECT_ROOT / "site")
+        print("site/index.html 갱신됨")
 
 
 if __name__ == "__main__":
