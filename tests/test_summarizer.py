@@ -14,7 +14,7 @@ def test_summarize_claude_print_호출하고_결과_파싱():
         "tags": "재테크,절약",
     }
     args, kwargs = mock_run.call_args
-    assert args[0] == ["claude", "--print", "--permission-mode", "bypassPermissions"]
+    assert args[0] == ["claude", "--print", "--tools", ""]
     assert "자막 전문 텍스트" in kwargs["input"]
 
 
