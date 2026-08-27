@@ -49,3 +49,40 @@ def test_cmd_process_성공하면_success_상태로_저장():
         )
     assert result["status"] == "success"
     assert db.has_video(conn, "vid1") is True
+
+
+def test_cmd_watch_신규영상_있으면_process_호출하고_알림전송():
+    conn = make_conn()
+    db.add_channel(conn, "UC123", "테스트채널", source="manual")
+    fake_entries = [{
+        "video_id": "vid1", "channel_id": "UC123", "title": "새 영상",
+        "url": "https://youtu.be/vid1", "published_at": "2026-08-01T00:00:00+00:00",
+    }]
+    with patch("youtube_insight.cli.fetch_feed_entries", return_value=fake_entries), \
+         patch("youtube_insight.cli.fetch_transcript", return_value="자막"), \
+         patch("youtube_insight.cli.summarize", return_value={"summary": "요약", "insight": "인사이트", "tags": "태그"}), \
+         patch("youtube_insight.cli.send_notification", return_value=True) as mock_notify:
+        processed = cli.cmd_watch(conn, notify_url="http://x", notify_token="tok")
+    assert len(processed) == 1
+    assert processed[0]["status"] == "success"
+    mock_notify.assert_called_once()
+    assert "새 영상" in mock_notify.call_args[0][0]
+
+
+def test_cmd_watch_이미_처리된_영상은_건너뜀():
+    conn = make_conn()
+    db.add_channel(conn, "UC123", "테스트채널", source="manual")
+    db.upsert_video(conn, {
+        "video_id": "vid1", "channel_id": "UC123", "title": "기존 영상", "url": "u",
+        "published_at": "p", "transcript_full": "t", "summary": "s", "insight": "i",
+        "tags": "tag", "status": "success",
+    })
+    fake_entries = [{
+        "video_id": "vid1", "channel_id": "UC123", "title": "기존 영상",
+        "url": "u", "published_at": "p",
+    }]
+    with patch("youtube_insight.cli.fetch_feed_entries", return_value=fake_entries), \
+         patch("youtube_insight.cli.send_notification") as mock_notify:
+        processed = cli.cmd_watch(conn, notify_url="http://x", notify_token="tok")
+    assert processed == []
+    mock_notify.assert_not_called()

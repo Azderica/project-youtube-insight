@@ -5,6 +5,7 @@ from youtube_insight import config, db
 from youtube_insight.transcript import fetch_transcript
 from youtube_insight.summarizer import summarize
 from youtube_insight.notify import send_notification
+from youtube_insight.feed import fetch_feed_entries, find_new_entries
 
 
 def cmd_channels_add(conn: sqlite3.Connection, channel_id: str, channel_name: str) -> None:
@@ -47,6 +48,27 @@ def cmd_process(conn: sqlite3.Connection, video_id: str, channel_id: str, title:
     return video
 
 
+def cmd_watch(conn: sqlite3.Connection, notify_url: str, notify_token: str) -> list[dict]:
+    processed = []
+    for channel in db.list_channels(conn):
+        try:
+            entries = fetch_feed_entries(channel["channel_id"])
+        except Exception:
+            continue
+        known_ids = {row["video_id"] for row in conn.execute("SELECT video_id FROM videos").fetchall()}
+        new_entries = find_new_entries(entries, known_ids)
+        for entry in new_entries:
+            result = cmd_process(
+                conn, entry["video_id"], entry["channel_id"], entry["title"],
+                entry["url"], entry["published_at"],
+            )
+            processed.append(result)
+            if result["status"] == "success":
+                msg = f"🎬 새 영상: {result['title']}\n{result['insight']}\n{result['url']}"
+                send_notification(msg, url=notify_url, token=notify_token)
+    return processed
+
+
 def _get_connection() -> sqlite3.Connection:
     path = config.db_path()
     path.parent.mkdir(parents=True, exist_ok=True)
@@ -75,6 +97,8 @@ def build_parser() -> argparse.ArgumentParser:
     p_process.add_argument("url")
     p_process.add_argument("published_at")
 
+    sub.add_parser("watch")
+
     return parser
 
 
@@ -95,6 +119,9 @@ def main() -> None:
     elif args.command == "process":
         result = cmd_process(conn, args.video_id, args.channel_id, args.title, args.url, args.published_at)
         print(f"처리 완료: {result['status']}")
+    elif args.command == "watch":
+        processed = cmd_watch(conn, config.notify_url(), config.internal_api_token())
+        print(f"처리된 신규 영상: {len(processed)}건")
 
 
 if __name__ == "__main__":
