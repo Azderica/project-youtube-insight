@@ -12,17 +12,19 @@ def parse_feed(xml_text: str) -> list[dict]:
     root = ET.fromstring(xml_text)
     entries = []
     for entry in root.findall("atom:entry", NS):
-        video_id = entry.find("yt:videoId", NS).text
-        channel_id = entry.find("yt:channelId", NS).text
-        title = entry.find("atom:title", NS).text
-        link = entry.find("atom:link[@rel='alternate']", NS).get("href")
-        published = entry.find("atom:published", NS).text
+        video_id_el = entry.find("yt:videoId", NS)
+        channel_id_el = entry.find("yt:channelId", NS)
+        title_el = entry.find("atom:title", NS)
+        link_el = entry.find("atom:link[@rel='alternate']", NS)
+        published_el = entry.find("atom:published", NS)
+        if None in (video_id_el, channel_id_el, title_el, link_el, published_el):
+            continue
         entries.append({
-            "video_id": video_id,
-            "channel_id": channel_id,
-            "title": title,
-            "url": link,
-            "published_at": published,
+            "video_id": video_id_el.text,
+            "channel_id": channel_id_el.text,
+            "title": title_el.text,
+            "url": link_el.get("href"),
+            "published_at": published_el.text,
         })
     return entries
 

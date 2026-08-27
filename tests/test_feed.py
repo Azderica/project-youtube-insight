@@ -44,6 +44,33 @@ def test_fetch_feed_entries_urlopen_호출():
     assert called_url == "https://www.youtube.com/feeds/videos.xml?channel_id=UC123"
 
 
+FEED_XML_WITH_MISSING_FIELD = """<?xml version="1.0" encoding="UTF-8"?>
+<feed xmlns:yt="http://www.youtube.com/xml/schemas/2015" xmlns="http://www.w3.org/2005/Atom">
+ <yt:channelId>UC123</yt:channelId>
+ <title>테스트채널</title>
+ <entry>
+  <yt:videoId>vid1</yt:videoId>
+  <yt:channelId>UC123</yt:channelId>
+  <title>첫번째 영상</title>
+  <link rel="alternate" href="https://www.youtube.com/watch?v=vid1"/>
+  <published>2026-08-01T00:00:00+00:00</published>
+ </entry>
+ <entry>
+  <yt:videoId>vid2</yt:videoId>
+  <yt:channelId>UC123</yt:channelId>
+  <title>업커밍 라이브</title>
+  <link rel="alternate" href="https://www.youtube.com/watch?v=vid2"/>
+ </entry>
+</feed>
+"""
+
+
+def test_parse_feed_필드_누락된_항목은_건너뜀():
+    entries = feed.parse_feed(FEED_XML_WITH_MISSING_FIELD)
+    assert len(entries) == 1
+    assert entries[0]["video_id"] == "vid1"
+
+
 def test_find_new_entries_이미_처리된_video_id는_제외():
     entries = [
         {"video_id": "vid1", "channel_id": "UC123", "title": "a", "url": "u1", "published_at": "p1"},
