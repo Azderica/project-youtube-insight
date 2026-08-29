@@ -156,8 +156,8 @@ def main() -> None:
         processed = cmd_watch(conn, config.notify_url(), config.internal_api_token())
         print(f"처리된 신규 영상: {len(processed)}건")
     elif args.command == "publish":
-        cmd_publish(conn, config.PROJECT_ROOT / "site")
-        print("site/index.html 갱신됨")
+        cmd_publish(conn, config.PROJECT_ROOT / "docs")
+        print("docs/index.html 갱신됨")
 
 
 if __name__ == "__main__":
