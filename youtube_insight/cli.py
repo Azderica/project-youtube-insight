@@ -100,6 +100,22 @@ def cmd_publish(conn: sqlite3.Connection, site_dir) -> None:
     (site_dir / "index.html").write_text(html, encoding="utf-8")
 
 
+def cmd_search(conn: sqlite3.Connection, query: str) -> list[dict]:
+    conn.row_factory = sqlite3.Row
+    rows = conn.execute(
+        """
+        SELECT v.title, v.url, v.insight, v.published_at, c.channel_name
+        FROM videos v
+        JOIN videos_fts fts ON v.video_id = fts.video_id
+        JOIN channels c ON v.channel_id = c.channel_id
+        WHERE videos_fts MATCH ? AND v.status = 'success'
+        ORDER BY v.published_at DESC
+        """,
+        (f"{query}*",),
+    ).fetchall()
+    return [dict(row) for row in rows]
+
+
 def _get_connection() -> sqlite3.Connection:
     path = config.db_path()
     path.parent.mkdir(parents=True, exist_ok=True)
@@ -132,6 +148,9 @@ def build_parser() -> argparse.ArgumentParser:
 
     sub.add_parser("publish")
 
+    p_search = sub.add_parser("search")
+    p_search.add_argument("query")
+
     return parser
 
 
@@ -158,6 +177,12 @@ def main() -> None:
     elif args.command == "publish":
         cmd_publish(conn, config.PROJECT_ROOT / "docs")
         print("docs/index.html 갱신됨")
+    elif args.command == "search":
+        results = cmd_search(conn, args.query)
+        if not results:
+            print("검색 결과 없음")
+        for r in results:
+            print(f"[{r['channel_name']}] {r['title']}\n  {r['insight']}\n  {r['url']}\n")
 
 
 if __name__ == "__main__":

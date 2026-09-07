@@ -113,3 +113,36 @@ def test_cmd_watch_한_영상_처리중_예외나도_나머지_영상은_처리�
     assert len(processed) == 1
     assert processed[0]["video_id"] == "vid2"
     mock_notify.assert_called_once()
+
+
+def test_cmd_search_키워드로_성공처리된_영상_찾음():
+    conn = make_conn()
+    db.add_channel(conn, "UC123", "테스트채널", source="manual")
+    db.upsert_video(conn, {
+        "video_id": "vid1", "channel_id": "UC123", "title": "레벨 디자인 이야기",
+        "url": "https://youtu.be/vid1", "published_at": "2026-08-01T00:00:00+00:00",
+        "transcript_full": "랜드마크를 배치해서 플레이어를 유도한다", "summary": "요약",
+        "insight": "랜드마크 기반 유도", "tags": "레벨디자인", "status": "success",
+    })
+    results = cli.cmd_search(conn, "랜드마크")
+    assert len(results) == 1
+    assert results[0]["title"] == "레벨 디자인 이야기"
+    assert results[0]["channel_name"] == "테스트채널"
+    assert results[0]["insight"] == "랜드마크 기반 유도"
+
+
+def test_cmd_search_no_transcript_상태_영상은_제외():
+    conn = make_conn()
+    db.add_channel(conn, "UC123", "테스트채널", source="manual")
+    db.upsert_video(conn, {
+        "video_id": "vid1", "channel_id": "UC123", "title": "랜드마크 테스트",
+        "url": "u", "published_at": "p", "transcript_full": None, "summary": None,
+        "insight": None, "tags": None, "status": "no_transcript",
+    })
+    results = cli.cmd_search(conn, "랜드마크")
+    assert results == []
+
+
+def test_cmd_search_결과없으면_빈리스트():
+    conn = make_conn()
+    assert cli.cmd_search(conn, "존재하지않는검색어") == []
