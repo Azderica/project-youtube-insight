@@ -131,15 +131,21 @@ def test_cmd_search_키워드로_성공처리된_영상_찾음():
     assert results[0]["insight"] == "랜드마크 기반 유도"
 
 
-def test_cmd_search_no_transcript_상태_영상은_제외():
+def test_cmd_search_success상태가_아니면_summary가_있어도_제외():
     conn = make_conn()
     db.add_channel(conn, "UC123", "테스트채널", source="manual")
     db.upsert_video(conn, {
         "video_id": "vid1", "channel_id": "UC123", "title": "랜드마크 테스트",
-        "url": "u", "published_at": "p", "transcript_full": None, "summary": None,
-        "insight": None, "tags": None, "status": "no_transcript",
+        "url": "u", "published_at": "p", "transcript_full": "t", "summary": "요약",
+        "insight": "인사이트", "tags": "tag", "status": "failed",
     })
     results = cli.cmd_search(conn, "랜드마크")
+    assert results == []
+
+
+def test_cmd_search_예약문법이_포함된_쿼리는_예외없이_빈리스트반환():
+    conn = make_conn()
+    results = cli.cmd_search(conn, '오박사"')
     assert results == []
 
 

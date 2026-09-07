@@ -102,17 +102,20 @@ def cmd_publish(conn: sqlite3.Connection, site_dir) -> None:
 
 def cmd_search(conn: sqlite3.Connection, query: str) -> list[dict]:
     conn.row_factory = sqlite3.Row
-    rows = conn.execute(
-        """
-        SELECT v.title, v.url, v.insight, v.published_at, c.channel_name
-        FROM videos v
-        JOIN videos_fts fts ON v.video_id = fts.video_id
-        JOIN channels c ON v.channel_id = c.channel_id
-        WHERE videos_fts MATCH ? AND v.status = 'success'
-        ORDER BY v.published_at DESC
-        """,
-        (f"{query}*",),
-    ).fetchall()
+    try:
+        rows = conn.execute(
+            """
+            SELECT v.title, v.url, v.insight, v.published_at, c.channel_name
+            FROM videos v
+            JOIN videos_fts fts ON v.video_id = fts.video_id
+            JOIN channels c ON v.channel_id = c.channel_id
+            WHERE videos_fts MATCH ? AND v.status = 'success'
+            ORDER BY v.published_at DESC
+            """,
+            (f"{query}*",),
+        ).fetchall()
+    except sqlite3.OperationalError:
+        return []
     return [dict(row) for row in rows]
 
 
