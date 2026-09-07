@@ -88,7 +88,7 @@ def cmd_publish(conn: sqlite3.Connection, site_dir) -> None:
     conn.row_factory = sqlite3.Row
     rows = conn.execute(
         """
-        SELECT v.title, v.url, v.published_at, v.summary, v.insight, c.channel_name
+        SELECT v.video_id, v.title, v.url, v.published_at, v.summary, v.insight, c.channel_name
         FROM videos v JOIN channels c ON v.channel_id = c.channel_id
         WHERE v.status = 'success'
         ORDER BY v.published_at DESC

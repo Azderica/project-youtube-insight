@@ -6,7 +6,7 @@ PAGE_TEMPLATE = """<!DOCTYPE html>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <title>유튜브 인사이트</title>
-<style>
+{preload}<style>
   :root {{
     --bg: #f7f7f8;
     --card-bg: #ffffff;
@@ -60,6 +60,15 @@ PAGE_TEMPLATE = """<!DOCTYPE html>
     padding: 1.25rem 1.5rem;
     margin-bottom: 1rem;
   }}
+  .thumb {{
+    display: block;
+    width: 100%;
+    aspect-ratio: 16 / 9;
+    object-fit: cover;
+    border-radius: 8px;
+    margin: 0 0 0.85rem;
+    background: var(--border);
+  }}
   article h2 {{
     font-size: 1.05rem;
     margin: 0 0 0.35rem;
@@ -106,6 +115,7 @@ PAGE_TEMPLATE = """<!DOCTYPE html>
 """
 
 ITEM_TEMPLATE = """<article>
+<img class="thumb" src="{thumbnail_url}" alt="" loading="{loading}" fetchpriority="{fetchpriority}">
 <h2><a href="{url}">{title}</a></h2>
 <p class="meta">{channel_name} · {published_at}</p>
 <p class="summary">{summary}</p>
@@ -113,18 +123,29 @@ ITEM_TEMPLATE = """<article>
 </article>
 """
 
+PRELOAD_TEMPLATE = '<link rel="preload" as="image" fetchpriority="high" href="{thumbnail_url}">\n'
+
+
+def _thumbnail_url(video_id: str) -> str:
+    return f"https://i.ytimg.com/vi/{video_id}/hqdefault.jpg"
+
 
 def render_index(videos: list[dict]) -> str:
     if not videos:
-        return PAGE_TEMPLATE.format(body='<p class="empty">아직 정리된 영상이 없습니다.</p>')
+        return PAGE_TEMPLATE.format(preload="", body='<p class="empty">아직 정리된 영상이 없습니다.</p>')
     items = []
-    for video in videos:
+    for index, video in enumerate(videos):
+        is_first = index == 0
         items.append(ITEM_TEMPLATE.format(
+            thumbnail_url=html_escape.escape(_thumbnail_url(video["video_id"])),
             url=html_escape.escape(video["url"]),
             title=html_escape.escape(video["title"]),
             channel_name=html_escape.escape(video["channel_name"]),
             published_at=html_escape.escape(video["published_at"]),
             summary=html_escape.escape(video.get("summary") or ""),
             insight=html_escape.escape(video.get("insight") or ""),
+            loading="eager" if is_first else "lazy",
+            fetchpriority="high" if is_first else "auto",
         ))
-    return PAGE_TEMPLATE.format(body="\n".join(items))
+    preload = PRELOAD_TEMPLATE.format(thumbnail_url=html_escape.escape(_thumbnail_url(videos[0]["video_id"])))
+    return PAGE_TEMPLATE.format(preload=preload, body="\n".join(items))
